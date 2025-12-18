@@ -1,4 +1,4 @@
-name: Coklu Platform Paketleyici
+name: Coklu Platform Paketleyici (Hanima Ozel)
 
 on:
   push:
@@ -12,10 +12,11 @@ permissions:
 jobs:
   build:
     name: Build on ${{ matrix.os }}
+    # Mac icin spesifik olarak macos-13 (Intel) kullaniyoruz, 12.7.6 ile daha uyumludur
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest, macos-13]
 
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +26,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Bağımlılıkları Yükle
+      - name: Bagimliliklari Yukle
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller PyQt6
@@ -42,30 +43,33 @@ jobs:
           pyinstaller --noconsole --onefile --add-data="tree.png:." tree.py
           mv dist/tree dist/NoelAgaci_Linux
 
-      - name: Paketle (Mac)
-        if: matrix.os == 'macos-latest'
+      - name: Paketle (Mac 12.7.6 Uyumlu)
+        if: matrix.os == 'macos-13'
         run: |
-          pyinstaller --noconsole --windowed --onefile --add-data="tree.png:." tree.py
-          cd dist && zip -r NoelAgaci_Mac.zip tree.app
-          # Sadece binary olanı da yedekle
-          mv tree NoelAgaci_Mac_Binary
+          # --windowed Mac'te Terminali engeller, --name ile uygulama adini belirleriz
+          pyinstaller --noconsole --windowed --onefile --add-data="tree.png:." --name "NoelAgaci_Mac" tree.py
+          cd dist
+          # Hanima kolaylik: .app klasorunu zipleyelim
+          zip -r NoelAgaci_Mac_Monterey.zip NoelAgaci_Mac.app
+          # Yedek binary dosyasini da isimlendirelim
+          mv NoelAgaci_Mac NoelAgaci_Mac_Binary
 
-      - name: Dosyaları Kaydet (Artifact)
+      - name: Dosyalari Kaydet (Artifact)
         uses: actions/upload-artifact@v4
         with:
           name: Build-${{ matrix.os }}
           path: |
             dist/NoelAgaci_Windows.exe
             dist/NoelAgaci_Linux
-            dist/*.zip
+            dist/NoelAgaci_Mac_Monterey.zip
 
-      - name: Release Oluştur ve Dosyaları Yükle
+      - name: Release Olustur ve Dosyalari Yukle
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             dist/NoelAgaci_Windows.exe
             dist/NoelAgaci_Linux
-            dist/NoelAgaci_Mac.zip
+            dist/NoelAgaci_Mac_Monterey.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
