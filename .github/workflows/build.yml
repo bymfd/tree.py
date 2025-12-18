@@ -1,9 +1,14 @@
 name: Coklu Platform Paketleyici
 
-on: [push]
+on: 
+  push:
+    tags:
+      - 'v*' # v1.0, v2.1 gibi tag attığında çalışır
 
 jobs:
   build:
+    permissions:
+      contents: write # Release oluşturabilmek için bu izin şart
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -31,8 +36,9 @@ jobs:
         if: matrix.os != 'windows-latest'
         run: pyinstaller --noconsole --onefile --add-data="tree.png:." tree.py
 
-      - name: Dosyaları Kaydet
-        uses: actions/upload-artifact@v4
+      - name: Release Oluştur ve Yükle
+        uses: softprops/action-gh-release@v1
         with:
-          name: NoelAgaci-${{ matrix.os }}
-          path: dist/*
+          files: dist/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
