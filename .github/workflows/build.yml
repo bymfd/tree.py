@@ -1,14 +1,9 @@
 name: Coklu Platform Paketleyici
 
-on: 
-  push:
-    tags:
-      - 'v*' # v1.0, v2.1 gibi tag attığında çalışır
+on: [push]
 
 jobs:
   build:
-    permissions:
-      contents: write # Release oluşturabilmek için bu izin şart
     name: Build on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
@@ -32,13 +27,23 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: pyinstaller --noconsole --onefile --add-data="tree.png;." tree.py
 
-      - name: Paketle (Linux/Mac)
-        if: matrix.os != 'windows-latest'
+      - name: Paketle (Linux)
+        if: matrix.os == 'ubuntu-latest'
         run: pyinstaller --noconsole --onefile --add-data="tree.png:." tree.py
 
-      - name: Release Oluştur ve Yükle
-        uses: softprops/action-gh-release@v1
+      - name: Paketle (Mac)
+        if: matrix.os == 'macos-latest'
+        run: |
+          # Mac'te --windowed (veya -w) kullanarak .app paketi oluşturuyoruz
+          pyinstaller --noconsole --windowed --onefile --add-data="tree.png:." tree.py
+          # Mac izinlerini korumak için zip'liyoruz
+          cd dist && zip -r tree_mac.zip tree.app tree
+
+      - name: Dosyaları Kaydet
+        uses: actions/upload-artifact@v4
         with:
-          files: dist/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: NoelAgaci-${{ matrix.os }}
+          path: |
+            dist/*.exe
+            dist/tree
+            dist/*.zip
