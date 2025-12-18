@@ -1,6 +1,13 @@
 name: Coklu Platform Paketleyici
 
-on: [push]
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -25,25 +32,40 @@ jobs:
 
       - name: Paketle (Windows)
         if: matrix.os == 'windows-latest'
-        run: pyinstaller --noconsole --onefile --add-data="tree.png;." tree.py
+        run: |
+          pyinstaller --noconsole --onefile --add-data="tree.png;." tree.py
+          mv dist/tree.exe dist/NoelAgaci_Windows.exe
 
       - name: Paketle (Linux)
         if: matrix.os == 'ubuntu-latest'
-        run: pyinstaller --noconsole --onefile --add-data="tree.png:." tree.py
+        run: |
+          pyinstaller --noconsole --onefile --add-data="tree.png:." tree.py
+          mv dist/tree dist/NoelAgaci_Linux
 
       - name: Paketle (Mac)
         if: matrix.os == 'macos-latest'
         run: |
-          # Mac'te --windowed (veya -w) kullanarak .app paketi oluşturuyoruz
           pyinstaller --noconsole --windowed --onefile --add-data="tree.png:." tree.py
-          # Mac izinlerini korumak için zip'liyoruz
-          cd dist && zip -r tree_mac.zip tree.app tree
+          cd dist && zip -r NoelAgaci_Mac.zip tree.app
+          # Sadece binary olanı da yedekle
+          mv tree NoelAgaci_Mac_Binary
 
-      - name: Dosyaları Kaydet
+      - name: Dosyaları Kaydet (Artifact)
         uses: actions/upload-artifact@v4
         with:
-          name: NoelAgaci-${{ matrix.os }}
+          name: Build-${{ matrix.os }}
           path: |
-            dist/*.exe
-            dist/tree
+            dist/NoelAgaci_Windows.exe
+            dist/NoelAgaci_Linux
             dist/*.zip
+
+      - name: Release Oluştur ve Dosyaları Yükle
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/NoelAgaci_Windows.exe
+            dist/NoelAgaci_Linux
+            dist/NoelAgaci_Mac.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
